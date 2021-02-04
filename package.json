@@ -1,11 +1,11 @@
 {
   "author": "Dan VerWeire <dverweire@gmail.com>",
-  "name": "object-mapper",
+  "name": "object-mapper2",
   "description": "Copy properties from one object to another.",
   "version": "6.2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/wankdanker/node-object-mapper.git"
+    "url": "git@gitlab.com:atoptima/web/object-relational-mapper.git"
   },
   "scripts": {
     "test": "node test/test.js"
@@ -36,6 +36,9 @@
     },
     {
       "name": "scotthogan"
+    },
+    {
+      "name": "guimarqu"
     }
   ]
 }

@@ -20,8 +20,13 @@ function ObjectMapper(src, dest, map)
     dest = _undefined
   }
 
+  let custom_transform = _undefined
+
   // Loop through the map to process individual mapping instructions
   for (const srckey in map) {
+    if (srckey == "__custom_transform__") {
+      custom_transform = map[srckey]
+    }
     const destkey = map[srckey]
     // Extract the data from the source object or array
     const data = getKeyValue(src, srckey)
@@ -29,6 +34,10 @@ function ObjectMapper(src, dest, map)
     let context = {src: src, srckey: srckey, destkey: destkey}
     // Set the data into the destination object or array format
     dest = setKeyValue(dest, destkey, data, context)
+  }
+
+  if (custom_transform !== _undefined) {
+    dest = custom_transform(src, dest)
   }
 
   return dest
