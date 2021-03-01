@@ -37,7 +37,7 @@ function ObjectMapper(src, dest, map)
   }
 
   if (custom_transform !== _undefined) {
-    const custom_transform_method = eval(custom_transform)
+    let custom_transform_method = eval(custom_transform)
     dest = custom_transform_method(src, dest)
   }
 
