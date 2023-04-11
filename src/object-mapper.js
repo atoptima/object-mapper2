@@ -11,16 +11,6 @@ var _undefined
  * @constructor
  */
 
-function findall_custom_src_keys(src, prefix) {
-  const src_keys = [];
-  Object.keys(src).forEach(function(key, _) {
-    if( key.startsWith(prefix) ) { 
-      src_keys.push(key);
-    }
-  });
-  return src_keys;
-}
-
 function ObjectMapper(src, dest, map)
 {
   // There are two different constructors - move around properties if needed
@@ -57,8 +47,7 @@ function ObjectMapper(src, dest, map)
         return null;
       if (typeof tmp.matches_prefix == 'undefined' || tmp.matches_prefix == null)
         return null;
-      const custom_keys = findall_custom_src_keys(src, tmp.matches_prefix);
-      // todo
+      const custom_keys = Object.keys(src).filter((key, _) => key.startsWith(tmp.matches_prefix));
       custom_keys.forEach( srckey => {
         const field = srckey.split(tmp.matches_prefix)[1];
         const destkey = tmp.parent_key.concat('.', field);
