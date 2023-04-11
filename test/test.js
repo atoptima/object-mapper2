@@ -2656,3 +2656,63 @@ test("issue #74: mapping empty array should result in empty array", t => {
   t.deepEqual(result, expect);
   t.end();
 });
+
+test('map object with additional properties', function (t) {
+  var obj = {
+    "location_uid": ["l1", "l2"],
+    "vehicle_uid": ["v1", "v2"],
+    "location_cl_name": ["Work", "Home"],
+    "vehicle_cl_description": ["Volvo", "Volkswagen"],
+  };
+
+  var expect = {
+    locations: [
+      {
+        uid: "l1",
+        custom_labels: {
+          name: "Work"
+        }
+      },
+      {
+        uid: "l2",
+        custom_labels: {
+          name: "Home"
+        }
+      }
+    ],
+    vehicles: [
+      {
+        uid: "v1",
+        custom_labels: {
+          description: "Volvo"
+        }
+      },
+      {
+        uid: "v2",
+        custom_labels: {
+          description: "Volkswagen"
+        }
+      }
+    ]
+  };
+
+  var map = {
+    'location_uid': 'locations[].uid',
+    'vehicle_uid': 'vehicles[].uid',
+    '__additional_properties__': [
+      {
+        'parent_key': 'locations[].custom_labels',
+        'matches_prefix': 'location_cl_'
+      },
+      {
+        'parent_key': 'vehicles[].custom_labels',
+        'matches_prefix': 'vehicle_cl_'
+      }
+    ]
+  };
+
+  var result = om(obj, map);
+
+  t.deepEqual(result, expect);
+  t.end();
+});
