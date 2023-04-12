@@ -21,11 +21,15 @@ function ObjectMapper(src, dest, map)
   }
 
   let custom_transform = _undefined
+  let additional_properties = _undefined
 
   // Loop through the map to process individual mapping instructions
   for (const srckey in map) {
     if (srckey == "__custom_transform__") {
       custom_transform = map[srckey]
+    }
+    if (srckey == "__additional_properties__") {
+      additional_properties = map[srckey]
     }
     const destkey = map[srckey]
     // Extract the data from the source object or array
@@ -34,6 +38,24 @@ function ObjectMapper(src, dest, map)
     let context = {src: src, srckey: srckey, destkey: destkey}
     // Set the data into the destination object or array format
     dest = setKeyValue(dest, destkey, data, context)
+  }
+
+  if (additional_properties !== _undefined) {
+    additional_properties.forEach( tmp => {
+      // Make sure both attributes are defined
+      if (typeof tmp.parent_key == 'undefined' || tmp.parent_key == null)
+        return null;
+      if (typeof tmp.matches_prefix == 'undefined' || tmp.matches_prefix == null)
+        return null;
+      const custom_keys = Object.keys(src).filter((key, _) => key.startsWith(tmp.matches_prefix));
+      custom_keys.forEach( srckey => {
+        const field = srckey.split(tmp.matches_prefix)[1];
+        const destkey = tmp.parent_key.concat('.', field);
+        const data = getKeyValue(src, srckey);
+        const context = {src: src, srckey: srckey, destkey: destkey};
+        dest = setKeyValue(dest, destkey, data, context);
+      });
+    });
   }
 
   if (custom_transform !== _undefined) {
