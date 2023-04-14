@@ -72,6 +72,7 @@ function ObjectMapper(src, dest, map)
   // Loop through the map to add default values to dest as necessary
   for (const srckey in map) {
     if (srckey == "__custom_transform__") continue;
+    if (srckey == "__additional_properties__") continue;
     const destkey = map[srckey]
     // Build an object with all of these parameters in case default functions need them to derive their values
     let context = {src: src, srckey: srckey, destkey: destkey}
@@ -271,7 +272,7 @@ function setKeyValue(dest, keystr, data, context = {})
       if (typeof d !== 'undefined') context.default = d
       dest = setKeyValue(dest, k, data, context)
     }
-    // The value is an addition property.  Recurse with the object key
+    // The value is an additional property.  Recurse with the object key
     else if (keystr.parent_key) {
       dest = setKeyValue(dest, keystr.parent_key, data, context)
     }
