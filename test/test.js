@@ -1595,7 +1595,7 @@ test('mapping - map full array to single value via transform', function (t) {
 
         return a;
       }
-    , null ]]
+    , [] ]]
   };
 
   var expect = {
@@ -1749,7 +1749,7 @@ test('map object to another - allow null values', function (t) {
   t.end();
 });
 
-test('map object to another - allow null values', function (t) {
+test('map object to another recursively - allow null values', function (t) {
   var obj = {
     "a" : 1234,
     "foo": {
@@ -2665,8 +2665,8 @@ test('MAP with default and vector of elements', function (t) {
     foo: ['bar', 'baz']
   }
   var map = {
-    'foo': 'toto[].foo',
-    'undefined_key': { key: 'toto[].key_with_default', default: null }
+    'undefined_key': { key: 'toto[].key_with_default', default: null },
+    'foo': 'toto[].foo'
   }
   var expect = {
     toto: [
