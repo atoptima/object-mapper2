@@ -48,6 +48,12 @@ function ObjectMapper(src, dest, map)
       if (typeof tmp.matches_prefix == 'undefined' || tmp.matches_prefix == null)
         return null;
       const custom_keys = Object.keys(src).filter((key, _) => key.startsWith(tmp.matches_prefix));
+      // if no custom keys, call default
+      if (custom_keys.length == 0) {
+        let context = { src: src, destkey: tmp } // srckey: null, 
+        setKeyValue(dest, tmp, null, context);
+      }
+      // add mappings for each custom key
       custom_keys.forEach( srckey => {
         const field = srckey.split(tmp.matches_prefix)[1];
         const destkey = tmp.parent_key.concat('.', field);
@@ -254,6 +260,10 @@ function setKeyValue(dest, keystr, data, context = {})
       if (typeof t !== 'undefined') context.transform = t
       if (typeof d !== 'undefined') context.default = d
       dest = setKeyValue(dest, k, data, context)
+    }
+    // The value is an addition property.  Recurse with the object key
+    else if (keystr.parent_key) {
+      dest = setKeyValue(dest, keystr.parent_key, data, context)
     }
     // The value is in regular object notation.  Recurse with the object key
     else
