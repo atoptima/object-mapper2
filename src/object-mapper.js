@@ -48,6 +48,12 @@ function ObjectMapper(src, dest, map)
       if (typeof tmp.matches_prefix == 'undefined' || tmp.matches_prefix == null)
         return null;
       const custom_keys = Object.keys(src).filter((key, _) => key.startsWith(tmp.matches_prefix));
+      // if no custom keys, call default
+      if (custom_keys.length == 0) {
+        let context = { src: src, destkey: tmp }
+        setKeyValue(dest, tmp, null, context);
+      }
+      // add mappings for each custom key
       custom_keys.forEach( srckey => {
         const field = srckey.split(tmp.matches_prefix)[1];
         const destkey = tmp.parent_key.concat('.', field);
@@ -61,6 +67,17 @@ function ObjectMapper(src, dest, map)
   if (custom_transform !== _undefined) {
     let custom_transform_method = eval(custom_transform)
     dest = custom_transform_method(src, dest)
+  }
+
+  // Loop through the map to add default values to dest as necessary
+  for (const srckey in map) {
+    if (srckey == "__custom_transform__") continue;
+    if (srckey == "__additional_properties__") continue;
+    const destkey = map[srckey]
+    // Build an object with all of these parameters in case default functions need them to derive their values
+    let context = {src: src, srckey: srckey, destkey: destkey}
+    // Set the data into the destination object or array format
+    dest = setDefaultValue(dest, destkey, context)
   }
 
   return dest
@@ -197,7 +214,7 @@ function select_obj_keys(src, keys)
   return null
 }
 
-// The goal of this function is to identify the different ways that this function can be called, and to structure the data uniformly before caling update()
+// The goal of this function is to identify the different ways that this function can be called, and to structure the data uniformly before calling update()
 function setKeyValue(dest, keystr, data, context = {})
 {
   // Keystr is undefined - call set_data in case there is a default or transformation to deal with
@@ -255,9 +272,83 @@ function setKeyValue(dest, keystr, data, context = {})
       if (typeof d !== 'undefined') context.default = d
       dest = setKeyValue(dest, k, data, context)
     }
+    // The value is an additional property.  Recurse with the object key
+    else if (keystr.parent_key) {
+      dest = setKeyValue(dest, keystr.parent_key, data, context)
+    }
     // The value is in regular object notation.  Recurse with the object key
     else
       dest = setKeyValue(dest, keystr.key, data, context)
+  }
+
+  return dest
+}
+
+function setDefaultValue(dest, keystr, context = {})
+{
+  const data = null;
+  // Keystr is undefined - default was already set by `setKeyValue`
+  if (typeof keystr == 'undefined' || keystr == null || !parse(keystr))
+    return dest
+
+  // Keystr is an array of values.  Loop through each and identify what format the individual values are
+  if (Array.isArray(keystr)) {
+    for (let i=0; i<keystr.length; i++) {
+
+      // The substring value is in string notation - recurse with the key string
+      if (typeof keystr[i] == 'string')
+        dest = setDefaultValue(dest, keystr[i], context)
+
+      // The subtring value is in array notation - recurse with the key from the array
+      else if (Array.isArray(keystr[i])) {
+        let [k,t,d] = keystr[i]
+        if (typeof t !== 'undefined') context.transform = t
+        if (typeof d !== 'undefined') context.default = d
+        dest = setDefaultValue(dest, k, context)
+      }
+
+      // The substring value is in object notation - dig further
+      else {
+        if (typeof keystr[i].transform !== 'undefined') context.transform = keystr[i].transform
+        if (typeof keystr[i].default !== 'undefined') context.default = keystr[i].default
+
+        // If the substring value of the key is an array, parse the array.  If this is parsed in a recursion, it is confused with arrays containing multiple values
+        if (Array.isArray(keystr[i].key)) {
+          let [k,t,d] = keystr[i].key
+          if (typeof t !== 'undefined') context.transform = t
+          if (typeof d !== 'undefined') context.default = d
+          dest = setDefaultValue(dest, k, context)
+        }
+
+        // The substring value is regular object notation - recurse with the key of the substring
+        else
+          dest = setDefaultValue(dest, keystr[i].key, context)
+      }
+    }
+  }
+
+  // The value is in string notation - ready for update!
+  else if (typeof keystr == 'string' && typeof context.default !== 'undefined')
+    dest = update(dest, data, parse(keystr), context);
+
+  // The value is in object notation - dig a bit further
+  else {
+    if (typeof keystr.transform !== 'undefined') context.transform = keystr.transform
+    if (typeof keystr.default !== 'undefined') context.default = keystr.default
+    // If the value of the key is an array, parse the array.  If this is parsed in a recursion, it is confused with arrays containing multiple values
+    if (Array.isArray(keystr.key)) {
+      let [k,t,d] = keystr.key
+      if (typeof t !== 'undefined') context.transform = t
+      if (typeof d !== 'undefined') context.default = d
+      dest = setDefaultValue(dest, k, context)
+    }
+    // The value is an addition property.  Recurse with the object key
+    else if (keystr.parent_key) {
+      dest = setDefaultValue(dest, keystr.parent_key, context)
+    }
+    // The value is in regular object notation.  Recurse with the object key
+    else
+      dest = setDefaultValue(dest, keystr.key, context)
   }
 
   return dest
@@ -325,7 +416,7 @@ function update_arr(dest, key, data, keys, context)
     return dest
   }
 
-  // Just update a single array node
+  // Set the specific array index with the data
   if (key.ix !== '') {
     return update_arr_ix(dest, key.ix, applyTransform(data,dest,context), keys, context)
   }
@@ -343,10 +434,17 @@ function update_arr(dest, key, data, keys, context)
 
     return dest
   }
-
-  // Set the specific array index with the data
+  else if (key.ix == '' && data === null && Array.isArray(dest)) {
+    // Loop through each index in the destination object and update it with default values
+    dest.reduce(function(dest,_,ix) {
+      // Add default to child data element is required
+      return update_arr_ix(dest, ix, applyTransform(data,dest,context), keys.slice(), context)
+    }, dest)
+  }
   else
     return update_arr_ix(dest, '0', data, keys, context)
+
+  return dest
 }
 
 function applyTransform(data, dest, context){
@@ -377,10 +475,12 @@ function update_arr_ix(dest, ix, data, keys, context)
 // Set the given data into the given destination object
 function set_data(dest, key, data, context)
 {
-  // See if data is null and there is a default
-  if (typeof context.default !== 'undefined' && (data == null || typeof data == 'undefined')) {
+  // See if data is null and 'allow null' is not set
+  if ( (data == null || typeof data == 'undefined') && (!key || !key.nulls) ) {
+    // There is no default, ignore
+    if (typeof context.default == 'undefined') return dest;
     // There is a default function, call the function to set the default
-    if (typeof context.default == 'function') {
+    else if (typeof context.default == 'function') {
       dest = dest || {}
       data = context.default(context.src, context.srckey, dest, context.destkey)
     }
@@ -400,7 +500,8 @@ function set_data(dest, key, data, context)
     // Set the data if the data is not null, or if the 'allow nulls' key is set, or if there is a default (in the case of default=null, make sure to write this out)
     if (data !== null || key.nulls || (typeof context.default !== 'undefined' && context.default == null)) {
       dest = dest || {}
-      dest[key.name] = data
+      // If key doesn't already exist, set it
+      if (!dest[key.name]) dest[key.name] = data
     }
   }
 

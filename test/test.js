@@ -1595,7 +1595,7 @@ test('mapping - map full array to single value via transform', function (t) {
 
         return a;
       }
-    , null ]]
+    , [] ]]
   };
 
   var expect = {
@@ -1749,7 +1749,7 @@ test('map object to another - allow null values', function (t) {
   t.end();
 });
 
-test('map object to another - allow null values', function (t) {
+test('map object to another recursively - allow null values', function (t) {
   var obj = {
     "a" : 1234,
     "foo": {
@@ -2660,6 +2660,26 @@ test("issue #74: mapping empty array should result in empty array", t => {
   t.end();
 }); */
 
+test('MAP with default and vector of elements', function (t) {
+  var obj = {
+    foo: ['bar', 'baz']
+  }
+  var map = {
+    'undefined_key': { key: 'toto[].key_with_default', default: null },
+    'foo': 'toto[].foo'
+  }
+  var expect = {
+    toto: [
+      { foo: 'bar', key_with_default: null },
+      { foo: 'baz', key_with_default: null }
+    ]
+  }
+
+  var result = om(obj, map);
+  t.deepEqual(result, expect);
+  t.end();
+});
+
 test('map object with additional properties', function (t) {
   var obj = {
     "location_uid": ["l1", "l2"],
@@ -2710,6 +2730,58 @@ test('map object with additional properties', function (t) {
       {
         'parent_key': 'vehicles[].custom_labels',
         'matches_prefix': 'vehicle_cl_'
+      }
+    ]
+  };
+
+  var result = om(obj, map);
+
+  t.deepEqual(result, expect);
+  t.end();
+});
+
+test('map object with no additional properties', function (t) {
+  var obj = {
+    "location_uid": ["l1", "l2"],
+    "vehicle_uid": ["v1", "v2"],
+  };
+
+  var expect = {
+    locations: [
+      {
+        uid: "l1",
+        custom_labels: {}
+      },
+      {
+        uid: "l2",
+        custom_labels: {}
+      }
+    ],
+    vehicles: [
+      {
+        uid: "v1",
+        custom_labels: {}
+      },
+      {
+        uid: "v2",
+        custom_labels: {}
+      }
+    ]
+  };
+
+  var map = {
+    'location_uid': 'locations[].uid',
+    'vehicle_uid': 'vehicles[].uid',
+    '__additional_properties__': [
+      {
+        'parent_key': 'locations[].custom_labels',
+        'matches_prefix': 'location_cl_',
+        'default': {}
+      },
+      {
+        'parent_key': 'vehicles[].custom_labels',
+        'matches_prefix': 'vehicle_cl_',
+        'default': {}
       }
     ]
   };
