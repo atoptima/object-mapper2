@@ -2684,8 +2684,8 @@ test('map object with additional properties', function (t) {
   var obj = {
     "location_uid": ["l1", "l2"],
     "vehicle_uid": ["v1", "v2"],
-    "location_cl_name": ["Work", "Home"],
-    "vehicle_cl_description": ["Volvo", "Volkswagen"],
+    "location_cl_name": ["Work", null],
+    "vehicle_cl_description": ["", "Volkswagen"],
   };
 
   var expect = {
@@ -2698,16 +2698,14 @@ test('map object with additional properties', function (t) {
       },
       {
         uid: "l2",
-        custom_labels: {
-          name: "Home"
-        }
+        custom_labels: {}
       }
     ],
     vehicles: [
       {
         uid: "v1",
         custom_labels: {
-          description: "Volvo"
+          description: ""
         }
       },
       {
